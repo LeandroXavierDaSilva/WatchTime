@@ -1,0 +1,281 @@
+body{
+    background-color: rgb(45, 211, 111);
+    height: 100vh;
+}
+header {
+    text-align: right;
+    margin-left: auto;
+    
+}
+
+header button{
+    width: auto;
+}
+
+#home {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#home h1 {
+    margin-left: 45%;
+}
+
+
+
+body{
+    background-color: black;
+}
+
+h1{
+    color: rgba(255,198,50,1);
+}
+
+h2{
+    color: white;
+}
+
+.barrapesquisa{
+    background-color: rgba(255,198,50,1);
+}
+
+.bgsefido{
+    background-color: #0a0a0a;
+}
+
+.categoria a{
+    text-decoration: none;
+}
+
+
+#home button {
+    color: black;
+
+}
+
+
+
+.container-geral {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 0 10px 5px white;
+    background-color: rgba(36, 34, 31, 1);
+    margin-top: 50px;
+    height:900px;
+    flex-direction: column;
+}
+
+
+
+.cabecalho {
+    display: flex;
+    align-items: start;
+    color: #333;
+    margin-top: 50px;
+
+}
+
+.cabecalho img {
+    max-width: auto;
+}
+
+.descricao li {
+    margin-bottom: 30px;
+    padding: 5px;
+}
+
+.descricao li {
+    list-style: none;
+    display: block;
+    text-align: center;
+    background-color: #999;
+    
+}
+
+.descricao ul {
+    width: 150px;
+}
+
+
+.genero {
+    display: flex;
+    gap: 10px;
+    padding: 0px;
+    align-items: center;
+    
+}
+    
+
+.genero li {
+    justify-content: center;
+    align-items: center;
+}
+
+.diretores{
+    display: flex;
+    gap: 10px;
+    padding: 0px;
+    align-items: center;
+}
+
+
+.sinopse {
+    color: white;
+    width: 100ch;
+    margin-top: 30px;
+}
+
+.elenco-container {  
+    color: white;
+    width: 100%;
+    align-items: center;
+}
+
+.elenco-container h3 {
+    display: flex;
+    justify-content: center;
+}
+
+.elenco {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 126px;
+    font-size: 1rem;
+    color: white;
+}
+
+.elenco-flex {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+}
+
+.elenco p {
+    width: 200px;
+}
+
+
+
+
+
+.input-comentarios {
+    display: flex;
+    background: transparent;
+    width: auto;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+body {
+    height: auto;
+}
+
+.container-comentarios {
+    width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 50px;
+    margin-bottom: 100px;
+    height: 400px;
+    box-shadow: 0 0 10px 5px white;
+    background-color: rgba(36, 34, 31, 1);
+
+}
+
+.container-comentarios input{
+    height: auto;
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+.input-comentarios input {
+    display: block;
+    width: 400px;
+    margin: 10px;
+}
+
+.container-comentarios label {
+    color: white;
+    display: block;
+    text-align: center;
+    padding-top: 10px;
+}
+
+.container-comentarios button {
+    width: auto;
+    height: 40px;
+    margin: 0px;
+    padding: 0px 10px;
+    border-radius: 7px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.container-comentarios button:hover {
+    background-color: #ccc;
+}
+
+.container-comentarios h1 {
+    font-size: 2rem;
+    text-align: center;
+    
+}
+
+#listaComentarios {
+    color: white;
+}
+
+.detalhes {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px;
+    align-items: center;
+    
+}
+
+.input-comentarios input {
+    background: black;
+    color: white;
+    outline: none;
+    border: 1px solid rgba(36, 34, 31, 1) ;
+    border-radius: 4px;
+
+}
+
+.input-comentarios input:focus {
+    border: 1px solid white;
+}
+
+#avaliacao {
+    width: 55px;
+    
+}
+
+.container-comentarios ul {
+    list-style: none;
+    
+}
+
+.container-comentarios li {
+    
+    margin: 5px 0px;
+    display: block;
+    background-color: rgba(36, 34, 31, 1);
+}
+
+#mediaAvaliacoes {
+    justify-content: center;
+    color: white;
+    margin: 0px;
+    margin-left: 15px;
+}

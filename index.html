@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="./css/login.css">
+</head>
+<body class="centralize">
+
+    <img class="img1" src="./img/filmes.jpg" alt="">
+    <img class="img2" src="./img/filmes2.jpg" alt="">
+
+    <div>
+    <form class="container-login">
+        <h3>WatchTime</h3>
+        <div class="form-field">
+            <div><label for="">Email</label></div>
+            <input id="email" onchange="onChangeEmail()" type="email" name="email" placeholder="Seu@email.com">
+            <div id="email-required-error" class="error">Email é obrigatorio</div>
+            <div id="email-invalid-error" class="error">Email é invalido</div>
+        </div>
+        <div class="form-field">
+            <div><label for="">Senha</label></div>
+            <input onchange="onChangePassword()" id="password" type="password" name="password" placeholder="senha">
+            <div id="password-required-error" class="error">Senha é obrigatoria</div>
+        </div>
+        <div>
+            <button id="recover-password-button" onclick="recoverPassword()" type="button" class="clear" disabled="true" >Recuperar senha</button>
+        </div>
+        <div>
+            <button onclick="login()" id="login-button" type="button" class="solid" disabled="true" >Entrar</button>
+        </div>
+        <div>
+            <button onclick="register()" type="button" class="outline">Registrar</button>
+        </div>
+    </form>
+    </div>
+</body>
+
+
+
+
+<link rel="stylesheet" href="index.css">
+<link rel="stylesheet" href="global.css">
+
+
+
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+
+<script src="firebase-init.js"></script>
+<script src="index.js"></script>
+<script src="loading.js"></script>
+<script src="validations.js"></script>
+
+
+
+</html>

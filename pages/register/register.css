@@ -1,0 +1,19 @@
+body {
+    background: rgb(45, 211, 111);
+    height: 100vh;
+}
+form {
+    width: 300px;
+}
+input {
+    border: none;
+}
+button {
+    margin-bottom: 10px;
+}
+
+.container-login h1 {
+    text-align: center;
+    margin-top: 0px;
+
+}

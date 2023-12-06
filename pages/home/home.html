@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="./home.css"> 
+    <title>WATCHTIME</title>
+</head>
+
+<body>
+    
+    <div class="nome text-center" id="home">
+        <h1>WATCHTIME</h1>
+        <header>
+            <button type="button" class="clear" onclick="logout()">
+                Sair
+            </button>
+        </header>
+    </div>
+    
+    <nav class="navbar navbar-expand-lg barrapesquisa">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#wa">WATCHTIME</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="#home">Home</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#filmes">Filmes</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#series">Séries</a>
+              </li>
+
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="true">
+                  Categorias
+                </a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">Ação</a></li>
+                  <li><a class="dropdown-item" href="#">Animação</a></li>
+                  <li><a class="dropdown-item" href="#">Comédia</a></li>
+                  <li><a class="dropdown-item" href="#">Documentários</a></li>
+                  <li><a class="dropdown-item" href="#">Ficção científica</a></li>
+                  <li><a class="dropdown-item" href="#">Musical</a></li>
+                  <li><a class="dropdown-item" href="#">Romance</a></li>
+                  <li><a class="dropdown-item" href="#">Suspense</a></li>
+                  <li><a class="dropdown-item" href="#">Terror</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#pesquisadosporvoce">Pesquisados por você</a></li>
+                </ul>
+
+                <li class="nav-item">
+                    <a class="nav-link" aria-disabled="true">Plano</a>
+                  </li>
+
+              </li>
+
+            </ul>
+            <form class="d-flex" role="search">
+              <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+              <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+      </nav>
+
+      <div id="carouselExampleAutoplaying" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <a href="../filmes/tintin.html"><img src="../../img/tintin.jpg" class="d-block w-100" alt="..."></a>
+          </div>
+          <div class="carousel-item">
+            <a href="../filmes/jogosvorazes.html"><img src="../../img/jogos_vorazes.jpg" class="d-block w-100" alt="..."></a>
+          </div>
+          <div class="carousel-item">
+            <a href="../filmes/mortalkombat.html"><img src="../../img/mortal-kombat.jpg" class="d-block w-100" alt="..."></a>
+          </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleAutoplaying" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
+
+    <br>
+    <div class="container">
+      <div class="categoria bgsefido" id="filmes">
+          <h2>FILMES</h2>        
+      </div>
+
+      <div class="row">
+          <div class="col-md-2">
+              <a href="../filmes/birdbox.html"><img src="../../img/birdbox.jpg" class="img-fluid" alt="..."></a>
+          </div>
+          <div class="col-md-2">
+              <a href="../filmes/gentegrande.html"><img src="../../img/gentegrande.jpg" class="img-fluid" alt="..."></a>
+          </div>
+          <div class="col-md-2">
+              <a href="../filmes/guerrainfinita.html"><img src="../../img/GuerraInfinitacartaz.jpg" class="img-fluid" alt="..."></a>
+          </div>
+          <div class="col-md-2">
+              <a href="../filmes/abaleia.html"><img src="../../img/a baleia.jpg" class="img-fluid" alt="..."></a>
+          </div>
+          <div class="col-md-2">
+              <a href="../filmes/ateoultimohomem.html"><img src="../../img/atéoultimohomem.jpg" class="img-fluid" alt="..."></a>
+          </div>
+          <div class="col-md-2">
+              <a href="../filmes/it.html"><img src="../../img/it_a_coisa.jpg" class="img-fluid" alt="..."></a>
+          </div>
+
+      </div>
+
+
+
+    <br>
+    <div class="categoria bgsefido" id = "series">
+        <h2>SÉRIES</h2> 
+    </div>
+
+        <div class="row">
+            <div class="col-md-2">
+                <a href="../filmes/theflash.html"><img src="../../img/The_Flash.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/b99.html"><img src="../../img/Brooklyn_Nine-Nine-1.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/round6.html"><img src="../../img/round 6.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/tlou.html"><img src="../../img/the_last_of_us.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/greysanatomy.html"><img src="../../img/greys-anatomy.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/dark.html"><img src="../../img/dark.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+        </div>
+
+  
+
+    <br>
+    <div class="categoria bgsefido" id= "pesquisadosporvoce">
+        <h2>PESQUISADOS POR VOCÊ</h2> 
+    </div>
+
+
+        <div class="row">
+            <div class="col-md-2">
+                <a href="../filmes/it.html"><img src="../../img/it_a_coisa.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/tlou.html"><img src="../../img/the_last_of_us.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/gentegrande.html"><img src="../../img/gentegrande.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/birdbox.html"><img src="../../img/birdbox.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/theflash.html"><img src="../../img/The_Flash.jpg" class="img-fluid" alt="..."></a>
+            </div>
+
+            <div class="col-md-2">
+              <a href="../filmes/strangerthings.html"><img src="../../img/stranger-things.jpg" class="img-fluid" alt="..."></a>
+            </div>
+        </div>
+
+    
+    </div>
+        
+
+
+
+
+
+
+
+
+</body>
+
+<link rel="stylesheet" href="../../global.css">
+<link rel="stylesheet" href="home.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+
+<script src="../../firebase-init.js"></script>
+<script src="../../auth-guard.js"></script>
+<script src="home.js"></script>
+
+
+</html>

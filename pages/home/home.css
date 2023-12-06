@@ -1,0 +1,48 @@
+body{
+    background-color: rgb(45, 211, 111);
+    height: 100vh;
+}
+header {
+    text-align: right;
+    margin-left: auto;
+    
+}
+
+header button{
+    width: auto;
+}
+
+#home {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#home h1 {
+    margin-left: 40%;
+}
+
+
+body{
+    background-color: black;
+}
+
+h1{
+    color: rgba(255,198,50,1);
+}
+
+h2{
+    color: white;
+}
+
+.barrapesquisa{
+    background-color: rgba(255,198,50,1);
+}
+
+.bgsefido{
+    background-color: #0a0a0a;
+}
+
+.categoria a{
+    text-decoration: none;
+}

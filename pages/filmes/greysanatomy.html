@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="../../css/filmes.css"> 
+    <title>WATCHTIME</title>
+</head>
+
+<body>
+    
+    <div class="nome text-center" id="home">
+        <h1>WATCHTIME</h1>
+        <header>
+            <button type="button" class="clear" onclick="logout()">
+                Sair
+            </button>
+        </header>
+    </div>
+    
+    <nav class="navbar navbar-expand-lg barrapesquisa">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">WATCHTIME</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="../home/home.html">Home</a>
+              </li>
+            
+
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="true">
+                  Categorias
+                </a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">Ação</a></li>
+                  <li><a class="dropdown-item" href="#">Animação</a></li>
+                  <li><a class="dropdown-item" href="#">Comédia</a></li>
+                  <li><a class="dropdown-item" href="#">Documentários</a></li>
+                  <li><a class="dropdown-item" href="#">Ficção científica</a></li>
+                  <li><a class="dropdown-item" href="#">Musical</a></li>
+                  <li><a class="dropdown-item" href="#">Romance</a></li>
+                  <li><a class="dropdown-item" href="#">Suspense</a></li>
+                  <li><a class="dropdown-item" href="#">Terror</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#pesquisadosporvoce">Pesquisados por você</a></li>
+                </ul>
+
+
+              </li>
+
+            </ul>
+            <form class="d-flex" role="search">
+              <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+              <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+          </div>
+        </div>
+      </nav>
+
+ <div class="container-geral">
+    <div class="cabecalho">
+        <img src="../../img/greys-anatomy.jpg" alt="greysanatomy">
+        <div class="descricao">
+            <ul>
+                <li>Greys Anatomy</li>
+                    <ul class="genero">
+                        <li>Drama</li>
+                    </ul>
+                <li>2005</li>
+                <li>Star+</li>
+                    <ul class="diretores">
+                        <li>Shonda Rhimes</li>
+                    </ul>
+
+            </ul>
+        </div>
+    </div>
+
+    <div class="sinopse">
+        <p><strong>Sinopse:</strong> Na trama, os médicos do Grey Sloan Memorial Hospital lidam diariamente com casos de vida ou morte, enquanto enfrentam os dramas de suas vidas pessoais. Meredith Grey, filha de uma renomada cirurgiã, inicia seu programa de residência no hospital, encontrando paixões e amizades verdadeiras ao longo de sua carreira.</p>
+    </div>
+
+ <div class="elenco-container">
+    <h3>Elenco</h3>
+    <div class="elenco-flex">
+    <div class="elenco">
+        <img src="../../img/Ellen Pompeo.jpg" width="126px" height="189px" alt="">
+        <p>Ellen Pompeo</p>
+    </div>
+
+    <div class="elenco">
+        <img src="../../img/Chandra Wilson.jpg" width="126px" height="189px" alt="">
+        <p>Chandra Wilson</p>
+    </div>
+
+    <div class="elenco">
+        <img src="../../img/Justin Chambers.jpg" width="126px" height="189px" alt="">
+        <p>Justin Chambers</p>
+    </div>
+    <div class="elenco">
+        <img src="../../img/Patrick Dempsey.jpg" width="126px" height="189px" alt="">
+        <p>Patrick Dempsey</p>
+    </div>
+    <div class="elenco">
+        <img src="../../img/Jesse Williams.jpg" width="126px" height="189px" alt="">
+        <p>Jesse Williams</p>
+    </div>
+    </div>
+
+ </div>
+
+
+
+ </div>
+
+
+ <div class="container-comentarios">
+    <h1>Digite seu comentário</h1>
+    <div class="input-comentarios">
+        <input id="comentario" name="comentario" />
+        <input type="number" maxlength="5" minlength="1" id="avaliacao" name="avaliacao" />
+
+        <button onclick="addComentario()">
+            Enviar Comentário
+        </button>
+
+        <!-- Adiciona um elemento para exibir a média -->
+        <p id="mediaAvaliacoes">Média de Avaliações: <span id="valorMedia">0</span></p>
+    </div>
+
+    <div style="margin-top: 10px;">
+        <ul id="listaComentarios" name="listaComentarios">
+        </ul>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+</body>
+
+<link rel="stylesheet" href="../../global.css">
+<link rel="stylesheet" href="home.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+
+<script src="../../firebase-init.js"></script>
+<script src="../../auth-guard.js"></script>
+<script src="home.js"></script>
+
+
+<script src="../../comments.js"></script>
+<script src="../../avaliacoes.js"></script>
+
+</html>
+
+
