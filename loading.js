@@ -7,11 +7,7 @@ function showLoading() {
     div.appendChild(label);
 
     document.body.appendChild(div);
-
-    
-
 }
-
 function hideLoading() {
     const loadings = document.getElementsByClassName("loading");
     if (loadings.length) {
