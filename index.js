@@ -94,8 +94,6 @@ function isPasswordValid() {
     return true;
 }
 
-
-
 const form = {
     email: () => document.getElementById('email'),
     emailInvalidError: () => document.getElementById('email-invalid-error'),
