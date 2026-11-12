@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, User, Star, Bookmark, LogOut, X, 
-  Calendar, Clapperboard, Shield, Play, Users, Sparkles, Tv, Key, Edit3, Trash2, ArrowLeft, Filter, Plus, Globe, Tag, ChevronLeft, ChevronRight
+  Calendar, Clapperboard, Shield, Play, Users, Sparkles, Tv, Key, Edit3, Trash2, ArrowLeft, Filter, Plus, Globe, Tag, ChevronLeft, ChevronRight, Check
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -362,6 +362,11 @@ export default function App() {
   const closeConfirm = (result) => { confirmResolver.current?.(result); confirmResolver.current = null; setConfirmDialog(null); };
 
   const [avatarUrl, setAvatarUrl] = useState('');
+  
+  // Estados para edição do nome de usuário
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   const [movies, setMovies] = useState([]);
   const [aiSections, setAiSections] = useState([]);  
@@ -412,6 +417,12 @@ export default function App() {
 
   const [roomGenreFilter, setRoomGenreFilter] = useState('');
   const [roomRatingFilter, setRoomRatingFilter] = useState(0);
+
+  // Corrige o fundo branco no celular (overscroll)
+  useEffect(() => {
+    document.body.classList.add('bg-slate-950');
+    return () => document.body.classList.remove('bg-slate-950');
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -843,34 +854,80 @@ export default function App() {
     }
   };
 
+  // ----------------------------------------------------
+  // NOVA LÓGICA DE SALAS (Lendo e salvando em membros_sala)
+  // ----------------------------------------------------
+
   const fetchRooms = async () => {
-    const { data: rData } = await supabase.from('rooms').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
-    if (rData) {
+    // Busca todas as linhas da tabela membros_sala que pertencem ao usuário e traz a respectiva sala junto
+    const { data: mData, error } = await supabase
+      .from('membros_sala')
+      .select(`
+        sala_id,
+        rooms (*)
+      `)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      showToast('Erro ao carregar salas: ' + error.message, 'error');
+      return;
+    }
+
+    if (mData) {
+      // Extrai os objetos "rooms"
+      const rData = mData.map(item => item.rooms).filter(Boolean);
+      
       const { data: rmData } = await supabase.from('room_movies').select('room_id, user_name');
       const roomsWithMembers = rData.map(room => {
         const members = Array.from(new Set((rmData || []).filter(m => m.room_id === room.id).map(m => m.user_name || 'Usuário')));
         return { ...room, members };
       });
-      setRooms(roomsWithMembers);
+      
+      // Organiza pelas mais recentes
+      setRooms(roomsWithMembers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     }
   };
 
   const createRoom = async () => {
     if (!newRoomName.trim()) return showToast('Digite um nome para a sala', 'error');
     const shortCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+    
+    // 1. Cria a sala
     const { data, error } = await supabase.from('rooms').insert([{ name: newRoomName, user_id: session.user.id, room_code: shortCode }]).select();
+    
     if (!error && data) {
-      setRooms([{...data[0], members: []}, ...rooms]); setNewRoomName('');
-      showToast('Sala criada com sucesso!'); openRoom(data[0]);
-    } else showToast('Erro ao criar sala.', 'error');
+      // 2. Salva o vínculo fixo na tabela de membros
+      await supabase.from('membros_sala').insert([{ sala_id: data[0].id, user_id: session.user.id }]);
+      
+      setRooms([{...data[0], members: []}, ...rooms]); 
+      setNewRoomName('');
+      showToast('Sala criada com sucesso!'); 
+      openRoom(data[0]);
+    } else {
+      showToast('Erro ao criar sala.', 'error');
+    }
   };
 
   const joinRoom = async () => {
     if (!joinRoomCode.trim()) return showToast('Digite o código', 'error');
-    const { data } = await supabase.from('rooms').select('*').eq('room_code', joinRoomCode.toUpperCase()).maybeSingle();
-    if (data) { setJoinRoomCode(''); openRoom(data); fetchRooms(); } 
-    else showToast('Código inválido.', 'error');
-  }
+    
+    // 1. Pesquisa se a sala existe
+    const { data, error } = await supabase.from('rooms').select('*').eq('room_code', joinRoomCode.toUpperCase()).maybeSingle();
+    
+    if (data) { 
+      // 2. Salva o vínculo no banco para ficar FIXO
+      const { error: linkError } = await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id }]);
+      if (linkError) console.log("Usuário já está na sala ou ocorreu um erro:", linkError.message);
+
+      setJoinRoomCode(''); 
+      showToast('Bem-vinda(o)! A sala agora está salva no seu perfil.');
+      openRoom(data); 
+      fetchRooms(); // Recarrega a lista para mostrar a nova sala na ecrã
+    } 
+    else showToast('Código inválido ou sala não encontrada.', 'error');
+  };
+
+  // ----------------------------------------------------
 
   const handleEditRoomSubmit = async (e) => {
     e.preventDefault();
@@ -995,6 +1052,26 @@ export default function App() {
     if (error) { console.error('Erro ao remover foto:', error); showToast('Erro ao remover a foto.', 'error'); return; }
     setAvatarUrl('');
     showToast('Foto removida. Voltamos ao perfil padrão!');
+  };
+
+  // Função para editar o próprio nome de usuário no Supabase
+  const atualizarNomeUsuario = async () => {
+    if (!newUserName.trim()) return showToast('Por favor, digite um nome válido.', 'error');
+    
+    setIsUpdatingName(true);
+    const { data, error } = await supabase.auth.updateUser({
+      data: { full_name: newUserName }
+    });
+
+    if (error) {
+      showToast('Erro ao atualizar o nome: ' + error.message, 'error');
+    } else {
+      showToast('Nome atualizado com sucesso!');
+      setIsEditingName(false);
+      // Força a atualização da sessão local para o novo nome aparecer na mesma hora
+      setSession({ ...session, user: data.user });
+    }
+    setIsUpdatingName(false);
   };
 
   const sortedRoomMovies = byNewest(roomMovies);
@@ -1194,7 +1271,7 @@ export default function App() {
                 </div>
                 <h3 className="text-xl font-bold mb-4 text-white border-b border-slate-800 pb-2">Minhas Salas</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {rooms.length === 0 ? <p className="text-slate-500 text-center py-4 bg-slate-900 rounded-lg border border-slate-800 col-span-full">Você ainda não criou nenhuma sala.</p> : rooms.map(room => (
+                  {rooms.length === 0 ? <p className="text-slate-500 text-center py-4 bg-slate-900 rounded-lg border border-slate-800 col-span-full">Você ainda não está em nenhuma sala.</p> : rooms.map(room => (
                     
                     <div key={room.id} onClick={() => openRoom(room)} className="group flex flex-col sm:flex-row justify-between sm:items-center bg-slate-900 p-4 rounded-xl border border-slate-800 gap-4 cursor-pointer hover:border-rose-600 transition-all duration-300">
                       <div>
@@ -1212,8 +1289,12 @@ export default function App() {
                          </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); setEditRoomModal({isOpen: true, id: room.id, name: room.name})}} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Editar</button>
-                        <button onClick={(e) => deleteRoom(e, room.id)} className="bg-rose-900/30 hover:bg-rose-600 border border-rose-900/50 text-rose-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Excluir</button>
+                        {room.user_id === session.user.id && (
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); setEditRoomModal({isOpen: true, id: room.id, name: room.name})}} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Editar</button>
+                            <button onClick={(e) => deleteRoom(e, room.id)} className="bg-rose-900/30 hover:bg-rose-600 border border-rose-900/50 text-rose-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Excluir</button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1492,7 +1573,30 @@ export default function App() {
                </div>
 
                <div className="text-center md:text-left flex-1">
-                 <h1 className="text-3xl font-bold mb-1 text-white">{session.user.user_metadata?.full_name || 'Usuário'}</h1>
+                 {isEditingName ? (
+                   <div className="flex items-center gap-2 mb-1 justify-center md:justify-start">
+                     <input 
+                       type="text" 
+                       value={newUserName} 
+                       onChange={(e) => setNewUserName(e.target.value)}
+                       autoFocus
+                       className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-rose-600 text-lg w-full max-w-[250px]"
+                     />
+                     <button onClick={atualizarNomeUsuario} disabled={isUpdatingName} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition flex items-center gap-1">
+                       {isUpdatingName ? '...' : <><Check size={14} /> Salvar</>}
+                     </button>
+                     <button onClick={() => setIsEditingName(false)} disabled={isUpdatingName} className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition">
+                       <X size={16}/>
+                     </button>
+                   </div>
+                 ) : (
+                   <h1 className="text-3xl font-bold mb-1 text-white flex items-center justify-center md:justify-start gap-3">
+                     {session.user.user_metadata?.full_name || 'Usuário'}
+                     <button onClick={() => { setIsEditingName(true); setNewUserName(session.user.user_metadata?.full_name || ''); }} className="text-slate-500 hover:text-rose-500 transition-colors" title="Editar nome">
+                       <Edit3 size={18}/>
+                     </button>
+                   </h1>
+                 )}
                  <p className="text-slate-400 mb-6">{session.user.email}</p>
                  <div className="flex justify-center md:justify-start gap-8">
                    <div><span className="text-2xl font-black text-white">{diary.length}</span> <span className="text-xs text-slate-400 uppercase">Assistidos</span></div>
