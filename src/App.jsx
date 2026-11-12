@@ -393,14 +393,10 @@ export default function App() {
   const [watchlist, setWatchlist] = useState([]);
   const [diary, setDiary] = useState([]);
   
-  const [rating, setRating] = useState(0);
-  const [review, setReview] = useState('');
-  const [platform, setPlatform] = useState('');
-  const [dateWatched, setDateWatched] = useState(new Date().toISOString().split('T')[0]);
-
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [roomMovies, setRoomMovies] = useState([]);
+  const [roomMembersData, setRoomMembersData] = useState([]); // NOVO ESTADO: Armazena os membros reais da sala aberta
   const [newRoomName, setNewRoomName] = useState('');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [roomMovieSearch, setRoomMovieSearch] = useState(''); 
@@ -408,6 +404,11 @@ export default function App() {
   const [roomMovieSuggestions, setRoomMovieSuggestions] = useState([]);
   const [editRoomModal, setEditRoomModal] = useState({ isOpen: false, id: null, name: '' });
   
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [platform, setPlatform] = useState('');
+  const [dateWatched, setDateWatched] = useState(new Date().toISOString().split('T')[0]);
+
   const [publicProfile, setPublicProfile] = useState({ name: '', diary: [], watchlist: [], loading: false });
   const [profileTab, setProfileTab] = useState('diary'); 
   const [publicProfileTab, setPublicProfileTab] = useState('diary'); 
@@ -417,6 +418,12 @@ export default function App() {
 
   const [roomGenreFilter, setRoomGenreFilter] = useState('');
   const [roomRatingFilter, setRoomRatingFilter] = useState(0);
+
+  // Ref para acompanhar a sala atual ativa sem recriar o hook Realtime
+  const currentRoomId = useRef(null);
+  useEffect(() => {
+    currentRoomId.current = selectedRoom?.id;
+  }, [selectedRoom]);
 
   // Corrige o fundo branco no celular (overscroll)
   useEffect(() => {
@@ -430,6 +437,37 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
+
+  // ----------------------------------------------------
+  // SUPABASE REALTIME (TEMPO REAL)
+  // ----------------------------------------------------
+  useEffect(() => {
+    if (!session || !supabase) return;
+
+    const channel = supabase.channel('realtime-watchtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, (payload) => {
+        fetchRooms(); 
+        if (currentRoomId.current && payload.new && payload.new.id === currentRoomId.current) {
+          setSelectedRoom(prev => ({ ...prev, name: payload.new.name }));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_movies' }, () => {
+        if (currentRoomId.current) fetchRoomMovies(currentRoomId.current);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'membros_sala' }, () => {
+        fetchRooms();
+        if (currentRoomId.current) fetchRoomMembers(currentRoomId.current);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'diary' }, () => {
+        fetchDiary(session.user.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
+  // ----------------------------------------------------
 
   const fetchDiary = async (userId) => {
     let { data: dData, error } = await supabase.from('diary').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -807,13 +845,13 @@ export default function App() {
                 let { data, error } = await supabase.from(tableName).update({ ...entry, created_at: new Date().toISOString() }).eq('id', existing.id).select();
                 if (error) ({ data, error } = await supabase.from(tableName).update(entry).eq('id', existing.id).select());
                 if (error) return { error };
-                if (!data || data.length === 0) return { error: new Error('Nenhuma linha atualizada (provável bloqueio de RLS no UPDATE)') };
+                if (!data || data.length === 0) return { error: new Error('Nenhuma linha atualizada') };
                 return { error: null };
             }
             let { data, error } = await supabase.from(tableName).insert([{ ...entry, created_at: new Date().toISOString() }]).select();
             if (error) ({ data, error } = await supabase.from(tableName).insert([entry]).select());
             if (error) return { error };
-            if (!data || data.length === 0) return { error: new Error('Nenhuma linha inserida (provável bloqueio de RLS no INSERT/SELECT)') };
+            if (!data || data.length === 0) return { error: new Error('Nenhuma linha inserida') };
             return { error: null };
         };
 
@@ -854,12 +892,8 @@ export default function App() {
     }
   };
 
-  // ----------------------------------------------------
-  // NOVA LÓGICA DE SALAS (Lendo e salvando em membros_sala)
-  // ----------------------------------------------------
 
   const fetchRooms = async () => {
-    // Busca todas as linhas da tabela membros_sala que pertencem ao usuário e traz a respectiva sala junto
     const { data: mData, error } = await supabase
       .from('membros_sala')
       .select(`
@@ -874,32 +908,35 @@ export default function App() {
     }
 
     if (mData) {
-      // Extrai os objetos "rooms"
       const rData = mData.map(item => item.rooms).filter(Boolean);
       
-      const { data: rmData } = await supabase.from('room_movies').select('room_id, user_name');
+      const { data: allMembersData } = await supabase.from('membros_sala').select('sala_id, user_name');
       const roomsWithMembers = rData.map(room => {
-        const members = Array.from(new Set((rmData || []).filter(m => m.room_id === room.id).map(m => m.user_name || 'Usuário')));
+        const members = Array.from(new Set((allMembersData || []).filter(m => m.sala_id === room.id).map(m => m.user_name || 'Usuário')));
         return { ...room, members };
       });
       
-      // Organiza pelas mais recentes
       setRooms(roomsWithMembers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     }
+  };
+
+  const fetchRoomMembers = async (roomId) => {
+    // Busca na tabela quem realmente está conectado à sala (mesmo que ainda não tenha avaliado)
+    const { data } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
+    if (data) setRoomMembersData(data);
   };
 
   const createRoom = async () => {
     if (!newRoomName.trim()) return showToast('Digite um nome para a sala', 'error');
     const shortCode = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+    const userName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
     
-    // 1. Cria a sala
     const { data, error } = await supabase.from('rooms').insert([{ name: newRoomName, user_id: session.user.id, room_code: shortCode }]).select();
     
     if (!error && data) {
-      // 2. Salva o vínculo fixo na tabela de membros
-      await supabase.from('membros_sala').insert([{ sala_id: data[0].id, user_id: session.user.id }]);
+      await supabase.from('membros_sala').insert([{ sala_id: data[0].id, user_id: session.user.id, user_name: userName }]);
       
-      setRooms([{...data[0], members: []}, ...rooms]); 
+      setRooms([{...data[0], members: [userName]}, ...rooms]); 
       setNewRoomName('');
       showToast('Sala criada com sucesso!'); 
       openRoom(data[0]);
@@ -910,24 +947,21 @@ export default function App() {
 
   const joinRoom = async () => {
     if (!joinRoomCode.trim()) return showToast('Digite o código', 'error');
+    const userName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
     
-    // 1. Pesquisa se a sala existe
     const { data, error } = await supabase.from('rooms').select('*').eq('room_code', joinRoomCode.toUpperCase()).maybeSingle();
     
     if (data) { 
-      // 2. Salva o vínculo no banco para ficar FIXO
-      const { error: linkError } = await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id }]);
+      const { error: linkError } = await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id, user_name: userName }]);
       if (linkError) console.log("Usuário já está na sala ou ocorreu um erro:", linkError.message);
 
       setJoinRoomCode(''); 
       showToast('Bem-vinda(o)! A sala agora está salva no seu perfil.');
       openRoom(data); 
-      fetchRooms(); // Recarrega a lista para mostrar a nova sala na ecrã
+      fetchRooms(); 
     } 
     else showToast('Código inválido ou sala não encontrada.', 'error');
   };
-
-  // ----------------------------------------------------
 
   const handleEditRoomSubmit = async (e) => {
     e.preventDefault();
@@ -962,7 +996,9 @@ export default function App() {
   };
 
   const openRoom = (room) => {
-    setSelectedRoom(room); fetchRoomMovies(room.id);
+    setSelectedRoom(room); 
+    fetchRoomMovies(room.id);
+    fetchRoomMembers(room.id);
     setRoomMovieSearch(''); setRoomFilterQuery(''); setRoomMovieSuggestions([]);
     setRoomGenreFilter(''); setRoomRatingFilter(0);
   };
@@ -1054,7 +1090,6 @@ export default function App() {
     showToast('Foto removida. Voltamos ao perfil padrão!');
   };
 
-  // Função para editar o próprio nome de usuário no Supabase
   const atualizarNomeUsuario = async () => {
     if (!newUserName.trim()) return showToast('Por favor, digite um nome válido.', 'error');
     
@@ -1066,9 +1101,12 @@ export default function App() {
     if (error) {
       showToast('Erro ao atualizar o nome: ' + error.message, 'error');
     } else {
+      // Propaga o novo nome para as tabelas para atualizar em tempo real na tela dos outros
+      await supabase.from('room_movies').update({ user_name: newUserName }).eq('user_id', session.user.id);
+      await supabase.from('membros_sala').update({ user_name: newUserName }).eq('user_id', session.user.id);
+      
       showToast('Nome atualizado com sucesso!');
       setIsEditingName(false);
-      // Força a atualização da sessão local para o novo nome aparecer na mesma hora
       setSession({ ...session, user: data.user });
     }
     setIsUpdatingName(false);
@@ -1103,10 +1141,6 @@ export default function App() {
     const matchesGenre = roomGenreFilter === '' || genresStr.toLowerCase().includes(roomGenreFilter.toLowerCase());
     const matchesRating = roomRatingFilter === 0 || group.reviews.some(r => Number(r.rating) === roomRatingFilter);
     return matchesGenre && matchesRating;
-  });
-
-  const roomMembers = Array.from(new Set(roomMovies.map(m => m.user_id))).map(id => {
-    return { id, name: roomMovies.find(m => m.user_id === id).user_name || 'Usuário' };
   });
 
   if (!session) return <><AuthScreen showToast={showToast} /><Toast message={toastMsg.text} type={toastMsg.type} /></>;
@@ -1310,12 +1344,12 @@ export default function App() {
                 <div className="flex flex-col md:flex-row md:items-center gap-4 text-sm mb-8">
                   <p className="text-slate-400 flex items-center gap-2"><Key size={14}/> Código: <span className="text-white font-mono bg-slate-950 border border-slate-800 px-2 py-1 rounded tracking-widest">{selectedRoom.room_code || 'SEM CÓDIGO'}</span></p>
                   
-                  {roomMembers.length > 0 && (
+                  {roomMembersData.length > 0 && (
                     <div className="flex items-center gap-2 flex-wrap md:ml-4 pl-0 md:pl-4 md:border-l border-slate-700">
                       <span className="text-slate-500 text-xs uppercase tracking-wider font-bold">Membros Ativos:</span>
-                      {roomMembers.map(member => (
-                        <button key={member.id} onClick={() => openPublicProfile(member.id, member.name)} className="bg-slate-800 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1" title={`Ver perfil de ${member.name}`}>
-                           <User size={12}/> {member.name.split(' ')[0]}
+                      {roomMembersData.map(member => (
+                        <button key={member.user_id} onClick={() => openPublicProfile(member.user_id, member.user_name || 'Usuário')} className="bg-slate-800 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1" title={`Ver perfil de ${member.user_name || 'Usuário'}`}>
+                           <User size={12}/> {(member.user_name || 'Usuário').split(' ')[0]}
                         </button>
                       ))}
                     </div>
@@ -1436,15 +1470,16 @@ export default function App() {
                            
                            <div className="border-t border-slate-800 pt-4 mt-2">
                              <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Avaliações da Sala</h5>
-                             <div className="grid grid-cols-1 gap-3">
+                             {/* AQUI FOI ALTERADO PARA sm:grid-cols-2 (LADO A LADO) */}
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                  {group.reviews.map(review => (
                                    <div key={review.id} className="bg-slate-950 border border-slate-800 p-3 rounded-lg relative">
                                        <span className="font-bold text-rose-500 text-sm block mb-1">{review.user_name || 'Usuário'}</span>
                                        <div className="flex flex-wrap items-center gap-3 mb-2">
                                          <div className="bg-rose-600/20 text-rose-500 text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1"><Star size={10} className="fill-rose-500"/> {review.rating || 'S/N'}</div>
                                          {review.date_watched && <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar size={12} /> {review.date_watched.split('-').reverse().join('/')}</span>}
-                                         {review.platform && <span className="text-xs text-slate-400 flex items-center gap-1 border-l border-slate-700 pl-3"><Tv size={12} /> {review.platform}</span>}
                                        </div>
+                                       {review.platform && <span className="text-xs text-slate-400 flex items-center gap-1 mb-2"><Tv size={12} /> {review.platform}</span>}
                                        {review.review && <p className="text-sm text-slate-300 italic border-l-2 border-slate-600 pl-2">"{review.review}"</p>}
                                        
                                        {review.user_id === session.user.id && (
@@ -1457,7 +1492,7 @@ export default function App() {
                                  ))}
                              </div>
                              {!userReview && (
-                                <button onClick={(e) => { e.stopPropagation(); openModal(group.tmdb_id); }} className="mt-3 bg-slate-800 hover:bg-rose-600 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">+ Dar a minha nota</button>
+                                <button onClick={(e) => { e.stopPropagation(); openModal(group.tmdb_id); }} className="mt-3 w-full sm:w-auto bg-slate-800 hover:bg-rose-600 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1">+ Dar a minha nota</button>
                              )}
                            </div>
 
