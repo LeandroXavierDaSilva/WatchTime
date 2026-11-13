@@ -62,7 +62,7 @@ const parseDateTerms = (q) => {
   const monthNum = (w) => MONTH_NAMES[w] || MONTH_ABBR[w];
   take(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g, m => (okMonth(+m[2]) && okDay(+m[3])) ? { y: +m[1], m: +m[2], d: +m[3] } : null);
   take(/\b(?:dia\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}|\d{2}))?\b/g, m => (okDay(+m[1]) && okMonth(+m[2])) ? { d: +m[1], m: +m[2], y: fullYear(m[3]) } : null);
-  take(new RegExp(`\\b(?:dia\\s+)?(\\d{1,2})\\s+(?:de\\s+)?(${MONTH_RE})\\b\\.?(?:\\s+(?:de\\s+)?(\\d{4}))?`, 'g'),
+  take(new RegExp(`\\b(?:dia\s+)?(\\d{1,2})\\s+(?:de\\s+)?(${MONTH_RE})\\b\\.?(?:\\s+(?:de\\s+)?(\\d{4}))?`, 'g'),
     m => okDay(+m[1]) ? { d: +m[1], m: monthNum(m[2]), y: fullYear(m[3]) } : null);
   take(new RegExp(`\\b(${Object.keys(MONTH_NAMES).join('|')})\\b(?:\\s+(?:de\\s+)?(\\d{4}))?`, 'g'),
     m => ({ m: MONTH_NAMES[m[1]], y: fullYear(m[2]), d: null, bare: true, word: m[1] }));
@@ -166,6 +166,20 @@ const formatCreatedAt = (iso) => {
   const d = new Date(iso);
   if (isNaN(d)) return '';
   return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
+const getUniqueMembers = (usersList) => {
+  const unique = [];
+  const seenIds = new Set();
+  
+  for (const u of usersList) {
+    if (!u.user_id) continue;
+    if (!seenIds.has(u.user_id)) {
+      seenIds.add(u.user_id);
+      unique.push({ user_id: u.user_id, user_name: u.user_name || 'Usuário' });
+    }
+  }
+  return unique;
 };
 
 const MovieCarousel = ({ movies, onClick }) => {
@@ -356,7 +370,7 @@ const AuthScreen = ({ showToast }) => {
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [isInitializing, setIsInitializing] = useState(true); // <--- Impede o "piscar" da tela de login
+  const [isInitializing, setIsInitializing] = useState(true); 
   
   const [currentView, setCurrentView] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -437,7 +451,6 @@ export default function App() {
     return () => document.body.classList.remove('bg-slate-950');
   }, []);
 
-  // <--- Alterado: Tratamento para carregar o login salvo silenciosamente
   useEffect(() => {
     if (!supabase) { setIsInitializing(false); return; }
     
@@ -458,7 +471,6 @@ export default function App() {
     const channel = supabase.channel('realtime-watchtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, (payload) => {
         fetchRooms(); 
-        // <--- Alterado: Garante que todos que estão com a sala aberta vejam o novo nome ao mesmo tempo
         if (currentRoomId.current && payload.new && payload.new.id === currentRoomId.current) {
           setSelectedRoom(prev => prev ? { ...prev, name: payload.new.name || prev.name } : null);
         }
@@ -903,27 +915,30 @@ export default function App() {
 
     if (mData) {
       const rData = mData.map(item => item.rooms).filter(Boolean);
-      // <--- Alterado: puxa o ID do usuário (user_id) para garantir agrupamento exato sem misturar pessoas
-      const { data: allMembersData } = await supabase.from('membros_sala').select('sala_id, user_id, user_name');
       
+      const { data: allMembersData } = await supabase.from('membros_sala').select('sala_id, user_id, user_name');
+      const { data: allMoviesData } = await supabase.from('room_movies').select('room_id, user_id, user_name');
+
       const roomsWithMembers = rData.map(room => {
         const membersInRoom = (allMembersData || []).filter(m => m.sala_id === room.id);
-        const uniqueMembers = Array.from(new Map(membersInRoom.map(m => [m.user_id, m])).values());
-        const members = uniqueMembers.map(m => m.user_name || 'Usuário');
+        const moviesInRoom = (allMoviesData || []).filter(m => m.room_id === room.id);
         
-        return { ...room, members };
+        const allUsers = [...membersInRoom, ...moviesInRoom.map(m => ({ sala_id: m.room_id, user_id: m.user_id, user_name: m.user_name }))];
+        const uniqueMembers = getUniqueMembers(allUsers);
+
+        return { ...room, members: uniqueMembers.map(u => u.user_name) };
       });
+      
       setRooms(roomsWithMembers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     }
   };
 
   const fetchRoomMembers = async (roomId) => {
-    const { data } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
-    if (data) {
-      // <--- Alterado: Dedulpica EXCLUSIVAMENTE pelo ID da conta
-      const uniqueById = Array.from(new Map(data.map(m => [m.user_id, m])).values());
-      setRoomMembersData(uniqueById);
-    }
+    const { data: membros } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
+    const { data: movies } = await supabase.from('room_movies').select('user_id, user_name').eq('room_id', roomId);
+    
+    const allUsers = [...(membros || []), ...(movies || [])];
+    setRoomMembersData(getUniqueMembers(allUsers));
   };
 
   const createRoom = async () => {
@@ -1161,8 +1176,6 @@ export default function App() {
     return matchesGenre && matchesRating;
   });
 
-
-  // <--- Alterado: Tela de "Carregando" super rápida para evitar piscar o login
   if (isInitializing) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
