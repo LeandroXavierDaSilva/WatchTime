@@ -14,6 +14,13 @@ const TMDB_API_KEY = '5f4dcdde8ea6335d5a63bf674d84d113';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
+const formatName = (fullName) => {
+  if (!fullName) return 'Usuário';
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1]}`;
+};
+
 const countryMap = { 
   'US': 'Estados Unidos', 'BR': 'Brasil', 'KR': 'Coreia do Sul', 'JP': 'Japão', 
   'GB': 'Reino Unido', 'FR': 'França', 'ES': 'Espanha', 'IT': 'Itália', 
@@ -363,7 +370,6 @@ export default function App() {
 
   const [avatarUrl, setAvatarUrl] = useState('');
   
-  // Estados para edição do nome de usuário
   const [isEditingName, setIsEditingName] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -396,7 +402,7 @@ export default function App() {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [roomMovies, setRoomMovies] = useState([]);
-  const [roomMembersData, setRoomMembersData] = useState([]); // Membros reais da sala aberta
+  const [roomMembersData, setRoomMembersData] = useState([]); 
   const [newRoomName, setNewRoomName] = useState('');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [roomMovieSearch, setRoomMovieSearch] = useState(''); 
@@ -419,13 +425,11 @@ export default function App() {
   const [roomGenreFilter, setRoomGenreFilter] = useState('');
   const [roomRatingFilter, setRoomRatingFilter] = useState(0);
 
-  // Ref para acompanhar a sala atual ativa sem recriar o hook Realtime
   const currentRoomId = useRef(null);
   useEffect(() => {
     currentRoomId.current = selectedRoom?.id;
   }, [selectedRoom]);
 
-  // Corrige o fundo branco no celular (overscroll)
   useEffect(() => {
     document.body.classList.add('bg-slate-950');
     return () => document.body.classList.remove('bg-slate-950');
@@ -438,12 +442,8 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ----------------------------------------------------
-  // SUPABASE REALTIME (TEMPO REAL)
-  // ----------------------------------------------------
   useEffect(() => {
     if (!session || !supabase) return;
-
     const channel = supabase.channel('realtime-watchtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, (payload) => {
         fetchRooms(); 
@@ -462,12 +462,8 @@ export default function App() {
         fetchDiary(session.user.id);
       })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [session]);
-  // ----------------------------------------------------
 
   const fetchDiary = async (userId) => {
     let { data: dData, error } = await supabase.from('diary').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -857,11 +853,9 @@ export default function App() {
 
         let result = await write(fullEntry);
         if (result.error) {
-            console.warn(`Fallback acionado para a tabela ${tableName}:`, result.error);
             result = await write(safeEntry);
         }
         if (result.error) {
-            console.error(`Falha ao salvar em ${tableName}:`, result.error);
             throw new Error(`[${tableName}] ${result.error.message}`);
         }
     };
@@ -887,44 +881,28 @@ export default function App() {
         setIsModalOpen(false);
       }
     } catch (e) {
-      console.error('Erro ao salvar avaliação:', e);
       showToast(`Não foi possível salvar: ${e.message}`, 'error');
     }
   };
 
-
   const fetchRooms = async () => {
-    const { data: mData, error } = await supabase
-      .from('membros_sala')
-      .select(`
-        sala_id,
-        rooms (*)
-      `)
-      .eq('user_id', session.user.id);
-
-    if (error) {
-      showToast('Erro ao carregar salas: ' + error.message, 'error');
-      return;
-    }
+    const { data: mData, error } = await supabase.from('membros_sala').select(`sala_id, rooms (*)`).eq('user_id', session.user.id);
+    if (error) { showToast('Erro ao carregar salas: ' + error.message, 'error'); return; }
 
     if (mData) {
       const rData = mData.map(item => item.rooms).filter(Boolean);
-      
       const { data: allMembersData } = await supabase.from('membros_sala').select('sala_id, user_name');
       const roomsWithMembers = rData.map(room => {
         const members = Array.from(new Set((allMembersData || []).filter(m => m.sala_id === room.id).map(m => m.user_name || 'Usuário')));
         return { ...room, members };
       });
-      
       setRooms(roomsWithMembers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     }
   };
 
   const fetchRoomMembers = async (roomId) => {
-    // Busca na tabela quem realmente está conectado à sala
     const { data } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
     if (data) {
-      // Usa o Map para garantir que, caso o banco de dados envie algum duplicado por erro, a interface limpa instantaneamente
       const uniqueMembers = Array.from(new Map(data.map(m => [m.user_id, m])).values());
       setRoomMembersData(uniqueMembers);
     }
@@ -939,32 +917,25 @@ export default function App() {
     
     if (!error && data) {
       await supabase.from('membros_sala').insert([{ sala_id: data[0].id, user_id: session.user.id, user_name: userName }]);
-      
       setRooms([{...data[0], members: [userName]}, ...rooms]); 
       setNewRoomName('');
       showToast('Sala criada com sucesso!'); 
       openRoom(data[0]);
-    } else {
-      showToast('Erro ao criar sala.', 'error');
-    }
+    } else showToast('Erro ao criar sala.', 'error');
   };
 
   const joinRoom = async () => {
     if (!joinRoomCode.trim()) return showToast('Digite o código', 'error');
     const userName = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
-    
     const { data, error } = await supabase.from('rooms').select('*').eq('room_code', joinRoomCode.toUpperCase()).maybeSingle();
     
     if (data) { 
-      const { error: linkError } = await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id, user_name: userName }]);
-      if (linkError) console.log("Usuário já está na sala ou ocorreu um erro:", linkError.message);
-
+      await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id, user_name: userName }]);
       setJoinRoomCode(''); 
       showToast('Bem-vinda(o)! A sala agora está salva no seu perfil.');
       openRoom(data); 
       fetchRooms(); 
-    } 
-    else showToast('Código inválido ou sala não encontrada.', 'error');
+    } else showToast('Código inválido ou sala não encontrada.', 'error');
   };
 
   const handleEditRoomSubmit = async (e) => {
@@ -998,16 +969,24 @@ export default function App() {
       setRooms(rooms.filter(r => r.id !== id));
       if (selectedRoom?.id === id) setSelectedRoom(null);
       showToast('Você saiu da sala.');
+    } else showToast('Erro ao sair da sala.', 'error');
+  };
+
+  const kickMember = async (memberId, memberName) => {
+    if (!(await askConfirm({ title: 'Remover membro?', message: `Deseja remover ${formatName(memberName)} desta sala? Isso limpará também contas duplicadas.`, confirmLabel: 'Remover' }))) return;
+    const { error } = await supabase.from('membros_sala').delete().match({ sala_id: selectedRoom.id, user_id: memberId });
+    if (!error) {
+      setRoomMembersData(prev => prev.filter(m => m.user_id !== memberId));
+      fetchRooms();
+      showToast('Membro removido da sala.');
     } else {
-      showToast('Erro ao sair da sala.', 'error');
+      showToast('Erro ao remover membro.', 'error');
     }
   };
 
   const fetchRoomMovies = async (roomId) => {
     let { data, error } = await supabase.from('room_movies').select('*').eq('room_id', roomId).order('created_at', { ascending: false });
-    if (error) {
-      ({ data, error } = await supabase.from('room_movies').select('*').eq('room_id', roomId));
-    }
+    if (error) { ({ data, error } = await supabase.from('room_movies').select('*').eq('room_id', roomId)); }
     if (error) { showToast(`Erro ao carregar a sala: ${error.message}`, 'error'); return; }
     setRoomMovies(byNewest(data || []));
   };
@@ -1021,12 +1000,12 @@ export default function App() {
   };
 
   const openPublicProfile = async (userId, userName) => {
-    setPublicProfile({ name: userName, diary: [], watchlist: [], loading: true });
+    setPublicProfile({ name: formatName(userName), diary: [], watchlist: [], loading: true });
     setCurrentView('public_profile');
     setPublicProfileTab('diary'); 
     const { data: dData } = await supabase.from('diary').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     const { data: wData } = await supabase.from('watchlist').select('*').eq('user_id', userId);
-    setPublicProfile({ name: userName, diary: byNewest(dData || []), watchlist: wData || [], loading: false });
+    setPublicProfile({ name: formatName(userName), diary: byNewest(dData || []), watchlist: wData || [], loading: false });
   };
 
   const deleteRoomMovie = async (e, id) => {
@@ -1051,14 +1030,11 @@ export default function App() {
   const deleteDiaryEntry = async (e, id) => {
     e.stopPropagation(); 
     if (!(await askConfirm({ title: 'Excluir do Diário?', message: 'Este filme será removido do seu histórico pessoal.', confirmLabel: 'Excluir' }))) return;
-    
     const { error } = await supabase.from('diary').delete().eq('id', id);
     if (!error) {
       setDiary(diary.filter(d => d.id !== id));
       showToast('Filme excluído do seu diário!');
-    } else {
-      showToast('Erro ao excluir o filme.', 'error');
-    }
+    } else showToast('Erro ao excluir o filme.', 'error');
   };
 
   const compressImage = (file) => new Promise((resolve, reject) => {
@@ -1091,18 +1067,15 @@ export default function App() {
       setAvatarUrl(avatar);
       showToast('Foto de perfil atualizada!');
     } catch (err) {
-      console.error('Erro ao salvar foto:', err);
       showToast('Erro ao atualizar foto. Verifique se a tabela "profiles" foi criada.', 'error');
-    } finally {
-      e.target.value = '';
-    }
+    } finally { e.target.value = ''; }
   };
 
   const handleAvatarRemove = async (e) => {
     e.stopPropagation();
     if (!(await askConfirm({ title: 'Remover foto de perfil?', message: 'Sua foto será apagada e voltaremos para o círculo com a inicial do seu nome.', confirmLabel: 'Remover foto' }))) return;
     const { error } = await supabase.from('profiles').delete().eq('user_id', session.user.id);
-    if (error) { console.error('Erro ao remover foto:', error); showToast('Erro ao remover a foto.', 'error'); return; }
+    if (error) { showToast('Erro ao remover a foto.', 'error'); return; }
     setAvatarUrl('');
     showToast('Foto removida. Voltamos ao perfil padrão!');
   };
@@ -1118,13 +1091,18 @@ export default function App() {
     if (error) {
       showToast('Erro ao atualizar o nome: ' + error.message, 'error');
     } else {
-      // Propaga o novo nome para as tabelas para atualizar em tempo real na tela dos outros
       await supabase.from('room_movies').update({ user_name: newUserName }).eq('user_id', session.user.id);
       await supabase.from('membros_sala').update({ user_name: newUserName }).eq('user_id', session.user.id);
       
       showToast('Nome atualizado com sucesso!');
       setIsEditingName(false);
       setSession({ ...session, user: data.user });
+
+      fetchRooms();
+      if (currentRoomId.current) {
+          fetchRoomMembers(currentRoomId.current);
+          fetchRoomMovies(currentRoomId.current); 
+      }
     }
     setIsUpdatingName(false);
   };
@@ -1282,7 +1260,7 @@ export default function App() {
                   <section>
                     <h2 className="text-xl md:text-2xl font-bold mb-1 text-white flex items-center gap-2"><Sparkles size={20} className="text-rose-500" /> Achamos que você vai adorar</h2>
                     <p className="text-sm text-slate-500 mb-4">Escolhidos a partir de tudo que você avaliou com 4 e 5 estrelas.</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 mt-4">
                       {aiGeneral.slice(0, aiGeneralVisible).map(movie => <MovieCard key={movie.id} movie={movie} onClick={openModal} />)}
                     </div>
                     {!(aiExhausted && aiGeneral.length <= aiGeneralVisible) && (
@@ -1334,7 +1312,7 @@ export default function App() {
                            )}
                            {room.members && room.members.length > 0 && (
                              <span className="flex items-center gap-1 border-l border-slate-700 pl-3">
-                               <User size={12}/> {room.members.map(m => m.split(' ')[0]).join(', ')}
+                               <User size={12}/> {room.members.map(m => formatName(m)).join(', ')}
                              </span>
                            )}
                          </div>
@@ -1367,9 +1345,20 @@ export default function App() {
                     <div className="flex items-center gap-2 flex-wrap md:ml-4 pl-0 md:pl-4 md:border-l border-slate-700">
                       <span className="text-slate-500 text-xs uppercase tracking-wider font-bold">Membros Ativos:</span>
                       {roomMembersData.map(member => (
-                        <button key={member.user_id} onClick={() => openPublicProfile(member.user_id, member.user_name || 'Usuário')} className="bg-slate-800 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1" title={`Ver perfil de ${member.user_name || 'Usuário'}`}>
-                           <User size={12}/> {(member.user_name || 'Usuário').split(' ')[0]}
-                        </button>
+                        <div key={member.user_id} className="group relative flex items-center">
+                          <button onClick={() => openPublicProfile(member.user_id, member.user_name || 'Usuário')} className="bg-slate-800 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-full transition-colors flex items-center gap-1" title={`Ver perfil de ${formatName(member.user_name)}`}>
+                             <User size={12}/> {formatName(member.user_name)}
+                          </button>
+                          {selectedRoom.user_id === session.user.id && member.user_id !== session.user.id && (
+                            <button 
+                               onClick={() => kickMember(member.user_id, member.user_name)}
+                               className="absolute -top-1.5 -right-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                               title="Remover este membro da sala"
+                            >
+                               <X size={10} />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1390,10 +1379,6 @@ export default function App() {
                                    <div className="text-xs text-slate-400 leading-tight space-y-0.5">
                                       <p><span className="font-semibold text-slate-300">Dir:</span> {movie.credits.crew.find(c => c.job === 'Director')?.name || 'N/A'}</p>
                                       <p className="line-clamp-1"><span className="font-semibold text-slate-300">Com:</span> {movie.credits.cast.slice(0, 3).map(a => a.name).join(', ')}</p>
-                                      <p className="text-rose-400/80 mt-1">
-                                        {movie.genres?.map(g => g.name).join(' • ')} 
-                                        {movie.origin_country?.[0] ? ` • ${countryName(movie.origin_country[0])}` : ''}
-                                      </p>
                                    </div>
                                  )}
                               </div>
@@ -1411,8 +1396,7 @@ export default function App() {
                    
                    <div className="relative w-full sm:w-80">
                      <Filter size={14} className="absolute left-3 top-2.5 text-slate-500" />
-                     <input type="text" value={roomFilterQuery} onChange={(e) => setRoomFilterQuery(e.target.value)} placeholder="Filtrar ator, gênero, plataforma, data..." className="w-full bg-slate-950 border border-slate-800 rounded-full py-1.5 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-rose-600"/>
-                     {roomFilterQuery.trim() && profileMetaLoading && <p className="absolute -bottom-5 left-3 text-[11px] text-slate-500">Buscando detalhes dos filmes...</p>}
+                     <input type="text" value={roomFilterQuery} onChange={(e) => setRoomFilterQuery(e.target.value)} placeholder="Filtrar..." className="w-full bg-slate-950 border border-slate-800 rounded-full py-1.5 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-rose-600"/>
                    </div>
                 </div>
 
@@ -1434,29 +1418,11 @@ export default function App() {
                   ))}
                 </div>
                 
-                <div className="flex gap-2 overflow-x-auto pb-6 mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <button 
-                    onClick={() => setRoomRatingFilter(0)} 
-                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${roomRatingFilter === 0 ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20 font-bold' : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'}`}
-                  >
-                    Todas as Notas
-                  </button>
-                  {[5, 4, 3, 2, 1].map(star => (
-                    <button 
-                      key={star} 
-                      onClick={() => setRoomRatingFilter(star)} 
-                      className={`whitespace-nowrap flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-all ${roomRatingFilter === star ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20 font-bold' : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'}`}
-                    >
-                      {star} <Star size={14} className={roomRatingFilter === star ? 'fill-slate-950' : 'fill-slate-400'} />
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 mt-4">
                   {finalRoomMovies.length === 0 ? (
                      <div className="col-span-full text-center py-10 bg-slate-950 rounded-xl border border-slate-800 border-dashed">
                         <Clapperboard size={32} className="text-slate-600 mx-auto mb-3" />
-                        <p className="text-slate-400">Nenhum filme corresponde aos seus filtros nesta sala.</p>
+                        <p className="text-slate-400">Nenhum filme corresponde aos filtros.</p>
                      </div>
                   ) : finalRoomMovies.map(group => {
                     const userReview = group.reviews.find(r => r.user_id === session.user.id);
@@ -1474,7 +1440,7 @@ export default function App() {
                                  {group.title} 
                                  {group.year && <span className="text-sm text-slate-400 font-normal ml-1">({group.year})</span>}
                                </h4>
-                               <p className="text-xs text-slate-400 mb-3">Dirigido por {group.director || 'N/A'} • Com {group.actors || 'N/A'}</p>
+                               <p className="text-xs text-slate-400 mb-3">Dirigido por {group.director || 'N/A'}</p>
                                <MetaChips genre={group.genre} country={group.country} />
                              </div>
                              
@@ -1492,7 +1458,9 @@ export default function App() {
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                  {group.reviews.map(review => (
                                    <div key={review.id} className="bg-slate-950 border border-slate-800 p-3 rounded-lg relative">
-                                       <span className="font-bold text-rose-500 text-sm block mb-1">{(review.user_name || 'Usuário').split(' ')[0]}</span>
+                                       <span className="font-bold text-rose-500 text-sm block mb-1 truncate max-w-[150px]" title={review.user_name || 'Usuário'}>
+                                         {formatName(review.user_name)}
+                                       </span>
                                        <div className="flex flex-wrap items-center gap-3 mb-2">
                                          <div className="bg-rose-600/20 text-rose-500 text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1"><Star size={10} className="fill-rose-500"/> {review.rating || 'S/N'}</div>
                                          {review.date_watched && <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar size={12} /> {review.date_watched.split('-').reverse().join('/')}</span>}
@@ -1670,11 +1638,6 @@ export default function App() {
                    <button type="button" onClick={() => setProfileQuery('')} aria-label="Limpar pesquisa" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><X size={16} /></button>
                  )}
                </div>
-               {profileQuery.trim() && (
-                 <p className="text-xs text-slate-500 mt-2 ml-4">
-                   {profileMetaLoading ? 'Buscando detalhes dos filmes...' : `${filteredDiary.length} no diário • ${filteredWatchlist.length} em "Para ver depois"`}
-                 </p>
-               )}
              </div>
 
              <div className="flex gap-6 mb-6 border-b border-slate-800 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1697,43 +1660,6 @@ export default function App() {
              <div className="w-full min-h-[400px]">
                {profileTab === 'diary' && (
                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                   
-                   <div className="flex gap-2 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                     <button 
-                       onClick={() => setProfileGenreFilter('')} 
-                       className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${profileGenreFilter === '' ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}`}
-                     >
-                       Todos os Gêneros
-                     </button>
-                     {GENRES.filter(g => g.id !== '').map(g => (
-                       <button 
-                         key={g.id} 
-                         onClick={() => setProfileGenreFilter(g.name)} 
-                         className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${profileGenreFilter === g.name ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}`}
-                       >
-                         {g.name}
-                       </button>
-                     ))}
-                   </div>
-                   
-                   <div className="flex gap-2 overflow-x-auto pb-6 mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                     <button 
-                       onClick={() => setProfileRatingFilter(0)} 
-                       className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${profileRatingFilter === 0 ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20 font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}`}
-                     >
-                       Todas as Notas
-                     </button>
-                     {[5, 4, 3, 2, 1].map(star => (
-                       <button 
-                         key={star} 
-                         onClick={() => setProfileRatingFilter(star)} 
-                         className={`whitespace-nowrap flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-all ${profileRatingFilter === star ? 'bg-yellow-500 text-slate-950 shadow-lg shadow-yellow-500/20 font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}`}
-                       >
-                         {star} <Star size={14} className={profileRatingFilter === star ? 'fill-slate-950' : 'fill-slate-400'} />
-                       </button>
-                     ))}
-                   </div>
-                   
                    {diary.length === 0 ? (
                      <p className="text-sm text-slate-500 bg-slate-900 p-8 rounded-lg text-center">Nenhum filme avaliado ainda.</p>
                    ) : finalDiary.length === 0 ? (
@@ -1779,8 +1705,6 @@ export default function App() {
                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {watchlist.length === 0 ? (
                       <p className="text-sm text-slate-500 bg-slate-900 p-8 rounded-lg text-center">Sua lista está vazia.</p>
-                    ) : filteredWatchlist.length === 0 ? (
-                      <p className="text-sm text-slate-500 bg-slate-900 p-8 rounded-lg text-center">Nenhum filme da lista corresponde à pesquisa.</p>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                         {filteredWatchlist.map(m => (
@@ -1867,6 +1791,7 @@ export default function App() {
 
                     <p className="text-slate-300 leading-relaxed text-sm md:text-base">{selectedMovie.overview}</p>
                   </div>
+                  
                   <div>
                      <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2"><Play size={16} className="text-rose-600" /> Trailer Oficial</h4>
                      <div className="aspect-video w-full rounded-xl overflow-hidden bg-black shadow-inner relative border border-slate-800">
@@ -1875,6 +1800,7 @@ export default function App() {
                         ) : <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-900">Trailer indisponível no TMDB.</div>}
                      </div>
                   </div>
+                  
                 </div>
               </>
             )}
