@@ -1739,6 +1739,7 @@ export default function App() {
                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
                        {finalDiary.map(entry => (
                          <div key={entry.tmdb_id} onClick={() => openModal(entry.tmdb_id)} className="flex flex-col sm:flex-row bg-slate-900 rounded-xl overflow-hidden cursor-pointer hover:bg-slate-800 hover:border-slate-600 transition-all border border-slate-800 shadow relative group">
+                           {/* AQUI ESTÁ O AJUSTE PARA EXIBIR A CAPA COMPLETA IGUAL ÀS SALAS */}
                            <div className="w-full sm:w-36 md:w-44 shrink-0 relative aspect-[2/3] sm:aspect-auto">
                               {entry.poster_path && <img src={`${IMG_URL}${entry.poster_path}`} className="w-full h-full object-cover sm:absolute sm:inset-0 border-b sm:border-b-0 sm:border-r border-slate-800" />}
                               <div className="absolute top-2 left-2 bg-rose-600 text-white text-xs font-bold px-2 py-1 rounded shadow flex items-center gap-1 z-10">
@@ -1870,7 +1871,7 @@ export default function App() {
                         {selectedMovie.videos?.results.find(v => v.site === 'YouTube' && v.type === 'Trailer') ? (
                            <iframe className="w-full h-full absolute inset-0" src={`https://www.youtube.com/embed/${selectedMovie.videos.results.find(v => v.site === 'YouTube' && v.type === 'Trailer').key}?autoplay=0`} allowFullScreen></iframe>
                         ) : <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-900">Trailer indisponível no TMDB.</div>}
-                     </div>
+                      </div>
                   </div>
                 </div>
               </>
