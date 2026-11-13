@@ -356,6 +356,8 @@ const AuthScreen = ({ showToast }) => {
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true); // <--- Impede o "piscar" da tela de login
+  
   const [currentView, setCurrentView] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -435,10 +437,19 @@ export default function App() {
     return () => document.body.classList.remove('bg-slate-950');
   }, []);
 
+  // <--- Alterado: Tratamento para carregar o login salvo silenciosamente
   useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    if (!supabase) { setIsInitializing(false); return; }
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsInitializing(false); 
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -447,8 +458,9 @@ export default function App() {
     const channel = supabase.channel('realtime-watchtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, (payload) => {
         fetchRooms(); 
+        // <--- Alterado: Garante que todos que estão com a sala aberta vejam o novo nome ao mesmo tempo
         if (currentRoomId.current && payload.new && payload.new.id === currentRoomId.current) {
-          setSelectedRoom(prev => ({ ...prev, name: payload.new.name }));
+          setSelectedRoom(prev => prev ? { ...prev, name: payload.new.name || prev.name } : null);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'room_movies' }, () => {
@@ -891,9 +903,14 @@ export default function App() {
 
     if (mData) {
       const rData = mData.map(item => item.rooms).filter(Boolean);
-      const { data: allMembersData } = await supabase.from('membros_sala').select('sala_id, user_name');
+      // <--- Alterado: puxa o ID do usuário (user_id) para garantir agrupamento exato sem misturar pessoas
+      const { data: allMembersData } = await supabase.from('membros_sala').select('sala_id, user_id, user_name');
+      
       const roomsWithMembers = rData.map(room => {
-        const members = Array.from(new Set((allMembersData || []).filter(m => m.sala_id === room.id).map(m => m.user_name || 'Usuário')));
+        const membersInRoom = (allMembersData || []).filter(m => m.sala_id === room.id);
+        const uniqueMembers = Array.from(new Map(membersInRoom.map(m => [m.user_id, m])).values());
+        const members = uniqueMembers.map(m => m.user_name || 'Usuário');
+        
         return { ...room, members };
       });
       setRooms(roomsWithMembers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
@@ -903,22 +920,9 @@ export default function App() {
   const fetchRoomMembers = async (roomId) => {
     const { data } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
     if (data) {
-      // Impede duplicata física se houver por algum erro no DB
+      // <--- Alterado: Dedulpica EXCLUSIVAMENTE pelo ID da conta
       const uniqueById = Array.from(new Map(data.map(m => [m.user_id, m])).values());
-      
-      // Impede duplicata visual agrupando pelo nome (impede que apareça Leandro duas vezes, mantendo o do criador principal)
-      const uniqueByName = new Map();
-      uniqueById.forEach(m => {
-          const nameKey = formatName(m.user_name || '').toLowerCase();
-          if (!uniqueByName.has(nameKey)) {
-              uniqueByName.set(nameKey, m);
-          } else if (m.user_id === session.user.id) {
-              // Se tiver conflito de nome, dá preferência absoluta para mostrar o dono ativo
-              uniqueByName.set(nameKey, m);
-          }
-      });
-
-      setRoomMembersData(Array.from(uniqueByName.values()));
+      setRoomMembersData(uniqueById);
     }
   };
 
@@ -930,7 +934,6 @@ export default function App() {
     const { data, error } = await supabase.from('rooms').insert([{ name: newRoomName, user_id: session.user.id, room_code: shortCode }]).select();
     
     if (!error && data) {
-      // Ao criar, não precisa verificação dupla porque a sala acabou de nascer
       await supabase.from('membros_sala').insert([{ sala_id: data[0].id, user_id: session.user.id, user_name: userName }]);
       setRooms([{...data[0], members: [userName]}, ...rooms]); 
       setNewRoomName('');
@@ -945,7 +948,6 @@ export default function App() {
     const { data, error } = await supabase.from('rooms').select('*').eq('room_code', joinRoomCode.toUpperCase()).maybeSingle();
     
     if (data) { 
-      // TRAVA DE SEGURANÇA: Só insere a pessoa se ela ainda não estiver na sala!
       const { data: memberCheck } = await supabase.from('membros_sala').select('id').match({ sala_id: data.id, user_id: session.user.id }).maybeSingle();
       
       if (!memberCheck) {
@@ -1158,6 +1160,16 @@ export default function App() {
     const matchesRating = roomRatingFilter === 0 || group.reviews.some(r => Number(r.rating) === roomRatingFilter);
     return matchesGenre && matchesRating;
   });
+
+
+  // <--- Alterado: Tela de "Carregando" super rápida para evitar piscar o login
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
+        <div className="text-5xl font-extrabold text-rose-600 tracking-tighter animate-pulse mb-2">WatchTime.</div>
+      </div>
+    );
+  }
 
   if (!session) return <><AuthScreen showToast={showToast} /><Toast message={toastMsg.text} type={toastMsg.type} /></>;
 
