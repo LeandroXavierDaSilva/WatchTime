@@ -903,8 +903,22 @@ export default function App() {
   const fetchRoomMembers = async (roomId) => {
     const { data } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
     if (data) {
-      const uniqueMembers = Array.from(new Map(data.map(m => [m.user_id, m])).values());
-      setRoomMembersData(uniqueMembers);
+      // Impede duplicata física se houver por algum erro no DB
+      const uniqueById = Array.from(new Map(data.map(m => [m.user_id, m])).values());
+      
+      // Impede duplicata visual agrupando pelo nome (impede que apareça Leandro duas vezes, mantendo o do criador principal)
+      const uniqueByName = new Map();
+      uniqueById.forEach(m => {
+          const nameKey = formatName(m.user_name || '').toLowerCase();
+          if (!uniqueByName.has(nameKey)) {
+              uniqueByName.set(nameKey, m);
+          } else if (m.user_id === session.user.id) {
+              // Se tiver conflito de nome, dá preferência absoluta para mostrar o dono ativo
+              uniqueByName.set(nameKey, m);
+          }
+      });
+
+      setRoomMembersData(Array.from(uniqueByName.values()));
     }
   };
 
@@ -916,6 +930,7 @@ export default function App() {
     const { data, error } = await supabase.from('rooms').insert([{ name: newRoomName, user_id: session.user.id, room_code: shortCode }]).select();
     
     if (!error && data) {
+      // Ao criar, não precisa verificação dupla porque a sala acabou de nascer
       await supabase.from('membros_sala').insert([{ sala_id: data[0].id, user_id: session.user.id, user_name: userName }]);
       setRooms([{...data[0], members: [userName]}, ...rooms]); 
       setNewRoomName('');
@@ -930,7 +945,13 @@ export default function App() {
     const { data, error } = await supabase.from('rooms').select('*').eq('room_code', joinRoomCode.toUpperCase()).maybeSingle();
     
     if (data) { 
-      await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id, user_name: userName }]);
+      // TRAVA DE SEGURANÇA: Só insere a pessoa se ela ainda não estiver na sala!
+      const { data: memberCheck } = await supabase.from('membros_sala').select('id').match({ sala_id: data.id, user_id: session.user.id }).maybeSingle();
+      
+      if (!memberCheck) {
+         await supabase.from('membros_sala').insert([{ sala_id: data.id, user_id: session.user.id, user_name: userName }]);
+      }
+
       setJoinRoomCode(''); 
       showToast('Bem-vinda(o)! A sala agora está salva no seu perfil.');
       openRoom(data); 
