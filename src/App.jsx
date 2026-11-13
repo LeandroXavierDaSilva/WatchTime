@@ -396,7 +396,7 @@ export default function App() {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [roomMovies, setRoomMovies] = useState([]);
-  const [roomMembersData, setRoomMembersData] = useState([]); // NOVO ESTADO: Armazena os membros reais da sala aberta
+  const [roomMembersData, setRoomMembersData] = useState([]); // Membros reais da sala aberta
   const [newRoomName, setNewRoomName] = useState('');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [roomMovieSearch, setRoomMovieSearch] = useState(''); 
@@ -921,9 +921,13 @@ export default function App() {
   };
 
   const fetchRoomMembers = async (roomId) => {
-    // Busca na tabela quem realmente está conectado à sala (mesmo que ainda não tenha avaliado)
+    // Busca na tabela quem realmente está conectado à sala
     const { data } = await supabase.from('membros_sala').select('user_id, user_name').eq('sala_id', roomId);
-    if (data) setRoomMembersData(data);
+    if (data) {
+      // Usa o Map para garantir que, caso o banco de dados envie algum duplicado por erro, a interface limpa instantaneamente
+      const uniqueMembers = Array.from(new Map(data.map(m => [m.user_id, m])).values());
+      setRoomMembersData(uniqueMembers);
+    }
   };
 
   const createRoom = async () => {
@@ -983,6 +987,19 @@ export default function App() {
       setRooms(rooms.filter(r => r.id !== id));
       if (selectedRoom?.id === id) setSelectedRoom(null);
       showToast('Sala excluída!');
+    }
+  };
+
+  const leaveRoom = async (e, id) => {
+    e.stopPropagation();
+    if (!(await askConfirm({ title: 'Sair da sala?', message: 'Você não fará mais parte desta sala e seu nome será removido dos membros ativos.', confirmLabel: 'Sair da sala' }))) return;
+    const { error } = await supabase.from('membros_sala').delete().match({ sala_id: id, user_id: session.user.id });
+    if (!error) {
+      setRooms(rooms.filter(r => r.id !== id));
+      if (selectedRoom?.id === id) setSelectedRoom(null);
+      showToast('Você saiu da sala.');
+    } else {
+      showToast('Erro ao sair da sala.', 'error');
     }
   };
 
@@ -1323,11 +1340,13 @@ export default function App() {
                          </div>
                       </div>
                       <div className="flex gap-2">
-                        {room.user_id === session.user.id && (
+                        {room.user_id === session.user.id ? (
                           <>
                             <button onClick={(e) => { e.stopPropagation(); setEditRoomModal({isOpen: true, id: room.id, name: room.name})}} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Editar</button>
                             <button onClick={(e) => deleteRoom(e, room.id)} className="bg-rose-900/30 hover:bg-rose-600 border border-rose-900/50 text-rose-500 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Excluir</button>
                           </>
+                        ) : (
+                          <button onClick={(e) => leaveRoom(e, room.id)} className="bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Sair da Sala</button>
                         )}
                       </div>
                     </div>
@@ -1470,11 +1489,10 @@ export default function App() {
                            
                            <div className="border-t border-slate-800 pt-4 mt-2">
                              <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Avaliações da Sala</h5>
-                             {/* AQUI FOI ALTERADO PARA sm:grid-cols-2 (LADO A LADO) */}
                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                  {group.reviews.map(review => (
                                    <div key={review.id} className="bg-slate-950 border border-slate-800 p-3 rounded-lg relative">
-                                       <span className="font-bold text-rose-500 text-sm block mb-1">{review.user_name || 'Usuário'}</span>
+                                       <span className="font-bold text-rose-500 text-sm block mb-1">{(review.user_name || 'Usuário').split(' ')[0]}</span>
                                        <div className="flex flex-wrap items-center gap-3 mb-2">
                                          <div className="bg-rose-600/20 text-rose-500 text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1"><Star size={10} className="fill-rose-500"/> {review.rating || 'S/N'}</div>
                                          {review.date_watched && <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar size={12} /> {review.date_watched.split('-').reverse().join('/')}</span>}
