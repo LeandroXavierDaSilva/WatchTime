@@ -1,3 +1,6 @@
+Esse vazamento da data no iOS ocorre porque o navegador WebKit/Safari força uma largura interna padrão para seletores nativos <input type="date">.
+Para resolver, basta adicionar max-w-full, min-w-0 e box-sizing: border-box diretamente no elemento da data, além de restringir a largura do container interno (w-full overflow-hidden).
+Abaixo está o código completo corrigido. Substitua o seu arquivo por este:
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, User, Star, Bookmark, LogOut, X, 
@@ -1863,7 +1866,7 @@ export default function App() {
                 </div>
 
                 {/* Coluna 2: Formulário de Avaliação (E Pôster no Desktop) */}
-                <div className="w-full md:w-1/3 lg:w-1/4 bg-slate-950 p-6 flex flex-col items-center border-t md:border-t-0 md:border-r border-slate-800 shrink-0 order-2 md:order-1">
+                <div className="w-full md:w-1/3 lg:w-1/4 bg-slate-950 p-6 flex flex-col items-center border-t md:border-t-0 md:border-r border-slate-800 shrink-0 order-2 md:order-1 overflow-hidden">
                   
                   {/* Pôster exibido APENAS no Desktop */}
                   {selectedMovie.poster_path && (
@@ -1880,7 +1883,7 @@ export default function App() {
                     {watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'Na Lista Pessoal' : 'Salvar na Lista'}
                   </button>
                   
-                  <div className="w-full bg-slate-900 p-4 rounded-xl border border-slate-800">
+                  <div className="w-full bg-slate-900 p-4 rounded-xl border border-slate-800 box-border overflow-hidden">
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 text-center border-b border-slate-700 pb-2">{currentView === 'rooms' ? 'Sua Avaliação na Sala' : 'Registrar no Diário'}</h3>
                     <div className="mb-3">
                       <label className="block text-xs text-slate-400 mb-1 text-center">Sua Nota</label>
@@ -1888,9 +1891,14 @@ export default function App() {
                         {[1, 2, 3, 4, 5].map(star => <button key={star} type="button" onClick={() => setRating(star)} className="focus:outline-none"><Star size={28} className={star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-slate-600'} /></button>)}
                       </div>
                     </div>
-                    <div className="mb-3">
+                    <div className="mb-3 w-full min-w-0 overflow-hidden">
                       <label className="block text-xs text-slate-400 mb-1">Data que assistiu</label>
-                      <input type="date" value={dateWatched} onChange={(e) => setDateWatched(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-600" />
+                      <input 
+                        type="date" 
+                        value={dateWatched} 
+                        onChange={(e) => setDateWatched(e.target.value)} 
+                        className="w-full max-w-full min-w-0 block bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-600 box-border appearance-none" 
+                      />
                     </div>
                     <div className="mb-3">
                       <label className="block text-xs text-slate-400 mb-1">Onde assistiu?</label>
