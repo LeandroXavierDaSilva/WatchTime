@@ -1795,44 +1795,12 @@ export default function App() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-6xl h-[95vh] md:h-[90vh] rounded-2xl overflow-hidden relative shadow-2xl animate-in zoom-in-95 flex flex-col md:flex-row">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-6xl max-h-[90vh] rounded-2xl overflow-y-auto relative shadow-2xl animate-in zoom-in-95 flex flex-col md:flex-row">
             <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 bg-black/60 hover:bg-rose-600 text-white p-2 rounded-full transition z-20"><X size={20} /></button>
             {!selectedMovie ? <div className="p-12 w-full text-center text-slate-400 flex items-center justify-center">Carregando detalhes...</div> : (
               <>
-                <div className="w-full md:w-1/3 lg:w-1/4 bg-slate-950 p-6 flex flex-col items-center border-r border-slate-800 overflow-y-auto shrink-0">
-                  <img src={`${IMG_URL}${selectedMovie.poster_path}`} className="w-32 md:w-full rounded-lg shadow-lg mb-6 object-cover hidden md:block" />
-                  
-                  <button onClick={toggleWatchlist} className={`mb-6 w-full font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm border ${watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'bg-slate-900 border-rose-600 text-rose-500' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'}`}>
-                    <Bookmark size={18} className={watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? "fill-rose-500" : ""} /> 
-                    {watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'Na Lista Pessoal' : 'Salvar na Lista'}
-                  </button>
-                  
-                  <div className="w-full bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 text-center border-b border-slate-700 pb-2">{currentView === 'rooms' ? 'Sua Avaliação na Sala' : 'Registrar no Diário'}</h3>
-                    <div className="mb-3">
-                      <label className="block text-xs text-slate-400 mb-1 text-center">Sua Nota</label>
-                      <div className="flex justify-center gap-2">
-                        {[1, 2, 3, 4, 5].map(star => <button key={star} type="button" onClick={() => setRating(star)} className="focus:outline-none"><Star size={28} className={star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-slate-600'} /></button>)}
-                      </div>
-                    </div>
-                    <div className="mb-3">
-                      <label className="block text-xs text-slate-400 mb-1">Data que assistiu</label>
-                      <input type="date" value={dateWatched} onChange={(e) => setDateWatched(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-600" />
-                    </div>
-                    <div className="mb-3">
-                      <label className="block text-xs text-slate-400 mb-1">Onde assistiu?</label>
-                      <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-600">
-                        <option value="">Selecione...</option><option value="Cinema">Cinema</option><option value="Netflix">Netflix</option><option value="Prime Video">Prime Video</option><option value="Max">Max</option><option value="Disney+">Disney+</option><option value="Mídia Física">Mídia Física / Outro</option>
-                      </select>
-                    </div>
-                    <div className="mb-3">
-                      <label className="block text-xs text-slate-400 mb-1">Sua resenha (Opcional)</label>
-                      <textarea value={review} onChange={(e) => setReview(e.target.value)} placeholder="O que achou do filme?" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-rose-600 resize-none h-20" />
-                    </div>
-                    <button onClick={saveToDiary} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg text-sm transition">Salvar Avaliação</button>
-                  </div>
-                </div>
-                <div className="w-full md:w-2/3 lg:w-3/4 p-6 overflow-y-auto flex flex-col gap-6">
+                {/* Coluna 1: Informações do Filme (Ordem 1 no celular, Ordem 2 no desktop) */}
+                <div className="w-full md:w-2/3 lg:w-3/4 p-6 flex flex-col gap-6 order-1 md:order-2">
                   <div>
                     <h2 className="text-3xl md:text-5xl font-extrabold mb-2 text-white">{selectedMovie.title}</h2>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300 mb-4">
@@ -1872,6 +1840,41 @@ export default function App() {
                            <iframe className="w-full h-full absolute inset-0" src={`https://www.youtube.com/embed/${selectedMovie.videos.results.find(v => v.site === 'YouTube' && v.type === 'Trailer').key}?autoplay=0`} allowFullScreen></iframe>
                         ) : <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-900">Trailer indisponível no TMDB.</div>}
                       </div>
+                  </div>
+                </div>
+
+                {/* Coluna 2: Formulário de Avaliação (Ordem 2 no celular, Ordem 1 no desktop) */}
+                <div className="w-full md:w-1/3 lg:w-1/4 bg-slate-950 p-6 flex flex-col items-center border-t md:border-t-0 md:border-r border-slate-800 shrink-0 order-2 md:order-1">
+                  <img src={`${IMG_URL}${selectedMovie.poster_path}`} className="w-32 md:w-full rounded-lg shadow-lg mb-6 object-cover hidden md:block" />
+                  
+                  <button onClick={toggleWatchlist} className={`mb-6 w-full font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm border ${watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'bg-slate-900 border-rose-600 text-rose-500' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'}`}>
+                    <Bookmark size={18} className={watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? "fill-rose-500" : ""} /> 
+                    {watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'Na Lista Pessoal' : 'Salvar na Lista'}
+                  </button>
+                  
+                  <div className="w-full bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 text-center border-b border-slate-700 pb-2">{currentView === 'rooms' ? 'Sua Avaliação na Sala' : 'Registrar no Diário'}</h3>
+                    <div className="mb-3">
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Sua Nota</label>
+                      <div className="flex justify-center gap-2">
+                        {[1, 2, 3, 4, 5].map(star => <button key={star} type="button" onClick={() => setRating(star)} className="focus:outline-none"><Star size={28} className={star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-slate-600'} /></button>)}
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-xs text-slate-400 mb-1">Data que assistiu</label>
+                      <input type="date" value={dateWatched} onChange={(e) => setDateWatched(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-600" />
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-xs text-slate-400 mb-1">Onde assistiu?</label>
+                      <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-600">
+                        <option value="">Selecione...</option><option value="Cinema">Cinema</option><option value="Netflix">Netflix</option><option value="Prime Video">Prime Video</option><option value="Max">Max</option><option value="Disney+">Disney+</option><option value="Mídia Física">Mídia Física / Outro</option>
+                      </select>
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-xs text-slate-400 mb-1">Sua resenha (Opcional)</label>
+                      <textarea value={review} onChange={(e) => setReview(e.target.value)} placeholder="O que achou do filme?" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-rose-600 resize-none h-20" />
+                    </div>
+                    <button onClick={saveToDiary} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-lg text-sm transition">Salvar Avaliação</button>
                   </div>
                 </div>
               </>
