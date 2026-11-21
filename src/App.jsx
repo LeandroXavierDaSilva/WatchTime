@@ -1,3 +1,18 @@
+A solução que implementamos (colocar a imagem do pôster no topo md:hidden e o formulário de avaliação ao final no mobile) funciona e resolve o problema de visualização do pôster, mas não é a melhor experiência de uso (UX) possível no celular.
+Por que não é o layout ideal no celular?
+ * O pôster ocupa muito espaço vertical (scroll longo): No celular, uma imagem com proporção 2/3 (w-44 ou w-48) no topo faz o usuário ter que rolar a tela antes mesmo de ler o título ou as informações principais.
+ * O formulário de avaliação fica muito distante: Como o formulário de avaliação e o botão "Salvar na Lista" estão lá no final da coluna lateral (order-2), o usuário precisa rolar por todo o pôster, título, sinopse e player do trailer para conseguir avaliar o filme.
+Qual é a MELHOR maneira para o Celular? (Padrão de Apps como Letterboxd / IMDb)
+A forma ideal e mais elegante para telas móbile é integrar o pôster e as informações do topo em um cabeçalho compacto (lado a lado):
+ * Topo Compacto (Lado a Lado):
+   * O pôster fica à esquerda (pequeno, ~28 a 32 de largura).
+   * Ao lado do pôster (à direita), ficam o Título, Ano, Gêneros, Nota TMDB e o botão Salvar na Lista.
+ * Conteúdo Principal (Scroll leve):
+   * Logo abaixo vem a área de Avaliação rápida (Estrelas, Plataforma e Resenha).
+   * Em seguida, a Sinopse, Ficha Técnica (Direção/Elenco) e o Trailer.
+Dessa forma, assim que o modal abre no celular, o usuário já enxerga o pôster, o título e a opção de avaliar sem precisar rolar nada!
+Código Atualizado com o Layout Perfeito no Mobile
+Aqui está o código pronto ajustando apenas a estrutura interna do modal para ficar perfeita no celular e no computador:
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, User, Star, Bookmark, LogOut, X, 
@@ -363,7 +378,6 @@ export default function App() {
 
   const [avatarUrl, setAvatarUrl] = useState('');
   
-  // Estados para edição do nome de usuário
   const [isEditingName, setIsEditingName] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -396,7 +410,7 @@ export default function App() {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [roomMovies, setRoomMovies] = useState([]);
-  const [roomMembersData, setRoomMembersData] = useState([]); // Membros reais da sala aberta
+  const [roomMembersData, setRoomMembersData] = useState([]);
   const [newRoomName, setNewRoomName] = useState('');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [roomMovieSearch, setRoomMovieSearch] = useState(''); 
@@ -419,13 +433,11 @@ export default function App() {
   const [roomGenreFilter, setRoomGenreFilter] = useState('');
   const [roomRatingFilter, setRoomRatingFilter] = useState(0);
 
-  // Ref para acompanhar a sala atual ativa sem recriar o hook Realtime
   const currentRoomId = useRef(null);
   useEffect(() => {
     currentRoomId.current = selectedRoom?.id;
   }, [selectedRoom]);
 
-  // Corrige o fundo branco no celular (overscroll)
   useEffect(() => {
     document.body.classList.add('bg-slate-950');
     return () => document.body.classList.remove('bg-slate-950');
@@ -438,9 +450,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ----------------------------------------------------
-  // SUPABASE REALTIME (TEMPO REAL)
-  // ----------------------------------------------------
   useEffect(() => {
     if (!session || !supabase) return;
 
@@ -467,7 +476,6 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, [session]);
-  // ----------------------------------------------------
 
   const fetchDiary = async (userId) => {
     let { data: dData, error } = await supabase.from('diary').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -891,7 +899,6 @@ export default function App() {
       showToast(`Não foi possível salvar: ${e.message}`, 'error');
     }
   };
-
 
   const fetchRooms = async () => {
     const { data: mData, error } = await supabase
@@ -1739,7 +1746,6 @@ export default function App() {
                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
                        {finalDiary.map(entry => (
                          <div key={entry.tmdb_id} onClick={() => openModal(entry.tmdb_id)} className="flex flex-col sm:flex-row bg-slate-900 rounded-xl overflow-hidden cursor-pointer hover:bg-slate-800 hover:border-slate-600 transition-all border border-slate-800 shadow relative group">
-                           {/* AQUI ESTÁ O AJUSTE EXATO IGUAL ÀS SALAS */}
                            <div className="w-full sm:w-40 md:w-48 shrink-0 relative aspect-[2/3]">
                               {entry.poster_path && <img src={`${IMG_URL}${entry.poster_path}`} className="w-full h-full object-cover border-b sm:border-b-0 sm:border-r border-slate-800" />}
                               <div className="absolute top-2 left-2 bg-rose-600 text-white text-xs font-bold px-2 py-1 rounded shadow flex items-center gap-1 z-10">
@@ -1799,11 +1805,39 @@ export default function App() {
             <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 bg-black/60 hover:bg-rose-600 text-white p-2 rounded-full transition z-20"><X size={20} /></button>
             {!selectedMovie ? <div className="p-12 w-full text-center text-slate-400 flex items-center justify-center">Carregando detalhes...</div> : (
               <>
-                {/* Coluna 1: Informações do Filme (Ordem 1 no celular, Ordem 2 no desktop) */}
-                <div className="w-full md:w-2/3 lg:w-3/4 p-6 flex flex-col gap-6 order-1 md:order-2">
+                {/* Coluna 1: Informações do Filme */}
+                <div className="w-full md:w-2/3 lg:w-3/4 p-5 md:p-6 flex flex-col gap-6 order-1 md:order-2">
+                  
+                  {/* Cabeçalho Compacto Lado a Lado APENAS no Mobile */}
+                  <div className="flex gap-4 items-start md:hidden pr-8">
+                    {selectedMovie.poster_path && (
+                      <img 
+                        src={`${IMG_URL}${selectedMovie.poster_path}`} 
+                        alt={selectedMovie.title} 
+                        className="w-28 sm:w-32 rounded-lg shadow-lg object-cover shrink-0" 
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-2xl font-extrabold text-white leading-tight mb-1">{selectedMovie.title}</h2>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300 mb-2">
+                        <span className="font-bold">{selectedMovie.release_date?.split('-')[0]}</span>
+                        <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/20">
+                          <Star size={10} className="fill-yellow-500" /> <span className="font-bold">{selectedMovie.vote_average?.toFixed(1)}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-rose-400 font-medium mb-3 line-clamp-2">{selectedMovie.genres?.map(g => g.name).join(', ')}</p>
+                      
+                      <button onClick={toggleWatchlist} className={`w-full font-medium py-2 px-3 rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 border ${watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'bg-slate-900 border-rose-600 text-rose-500' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'}`}>
+                        <Bookmark size={14} className={watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? "fill-rose-500" : ""} /> 
+                        {watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'Na Lista' : '+ Minha Lista'}
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
-                    <h2 className="text-3xl md:text-5xl font-extrabold mb-2 text-white">{selectedMovie.title}</h2>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300 mb-4">
+                    {/* Título normal APENAS no Desktop */}
+                    <h2 className="hidden md:block text-3xl md:text-5xl font-extrabold mb-2 text-white">{selectedMovie.title}</h2>
+                    <div className="hidden md:flex flex-wrap items-center gap-3 text-sm text-slate-300 mb-4">
                       <span className="font-bold">{selectedMovie.release_date?.split('-')[0]}</span><span>•</span>
                       <span className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700">{selectedMovie.genres?.map(g => g.name).join(', ')}</span>
                       <div className="flex items-center gap-1 ml-auto bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full border border-yellow-500/20">
@@ -1843,11 +1877,20 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Coluna 2: Formulário de Avaliação (Ordem 2 no celular, Ordem 1 no desktop) */}
+                {/* Coluna 2: Formulário de Avaliação (E Pôster no Desktop) */}
                 <div className="w-full md:w-1/3 lg:w-1/4 bg-slate-950 p-6 flex flex-col items-center border-t md:border-t-0 md:border-r border-slate-800 shrink-0 order-2 md:order-1">
-                  <img src={`${IMG_URL}${selectedMovie.poster_path}`} className="w-32 md:w-full rounded-lg shadow-lg mb-6 object-cover hidden md:block" />
                   
-                  <button onClick={toggleWatchlist} className={`mb-6 w-full font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm border ${watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'bg-slate-900 border-rose-600 text-rose-500' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'}`}>
+                  {/* Pôster exibido APENAS no Desktop */}
+                  {selectedMovie.poster_path && (
+                    <img 
+                      src={`${IMG_URL}${selectedMovie.poster_path}`} 
+                      alt={selectedMovie.title} 
+                      className="w-full rounded-lg shadow-lg mb-6 object-cover hidden md:block" 
+                    />
+                  )}
+                  
+                  {/* Botão de salvar na lista APENAS no Desktop */}
+                  <button onClick={toggleWatchlist} className={`hidden md:flex mb-6 w-full font-medium py-3 px-4 rounded-xl transition-all items-center justify-center gap-2 shadow-sm border ${watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'bg-slate-900 border-rose-600 text-rose-500' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'}`}>
                     <Bookmark size={18} className={watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? "fill-rose-500" : ""} /> 
                     {watchlist.some(w => w.tmdb_id === selectedMovie.id.toString()) ? 'Na Lista Pessoal' : 'Salvar na Lista'}
                   </button>
