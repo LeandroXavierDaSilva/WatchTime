@@ -1,18 +1,3 @@
-A solução que implementamos (colocar a imagem do pôster no topo md:hidden e o formulário de avaliação ao final no mobile) funciona e resolve o problema de visualização do pôster, mas não é a melhor experiência de uso (UX) possível no celular.
-Por que não é o layout ideal no celular?
- * O pôster ocupa muito espaço vertical (scroll longo): No celular, uma imagem com proporção 2/3 (w-44 ou w-48) no topo faz o usuário ter que rolar a tela antes mesmo de ler o título ou as informações principais.
- * O formulário de avaliação fica muito distante: Como o formulário de avaliação e o botão "Salvar na Lista" estão lá no final da coluna lateral (order-2), o usuário precisa rolar por todo o pôster, título, sinopse e player do trailer para conseguir avaliar o filme.
-Qual é a MELHOR maneira para o Celular? (Padrão de Apps como Letterboxd / IMDb)
-A forma ideal e mais elegante para telas móbile é integrar o pôster e as informações do topo em um cabeçalho compacto (lado a lado):
- * Topo Compacto (Lado a Lado):
-   * O pôster fica à esquerda (pequeno, ~28 a 32 de largura).
-   * Ao lado do pôster (à direita), ficam o Título, Ano, Gêneros, Nota TMDB e o botão Salvar na Lista.
- * Conteúdo Principal (Scroll leve):
-   * Logo abaixo vem a área de Avaliação rápida (Estrelas, Plataforma e Resenha).
-   * Em seguida, a Sinopse, Ficha Técnica (Direção/Elenco) e o Trailer.
-Dessa forma, assim que o modal abre no celular, o usuário já enxerga o pôster, o título e a opção de avaliar sem precisar rolar nada!
-Código Atualizado com o Layout Perfeito no Mobile
-Aqui está o código pronto ajustando apenas a estrutura interna do modal para ficar perfeita no celular e no computador:
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, User, Star, Bookmark, LogOut, X, 
