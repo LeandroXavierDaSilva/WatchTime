@@ -1,6 +1,3 @@
-Esse vazamento da data no iOS ocorre porque o navegador WebKit/Safari força uma largura interna padrão para seletores nativos <input type="date">.
-Para resolver, basta adicionar max-w-full, min-w-0 e box-sizing: border-box diretamente no elemento da data, além de restringir a largura do container interno (w-full overflow-hidden).
-Abaixo está o código completo corrigido. Substitua o seu arquivo por este:
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, User, Star, Bookmark, LogOut, X, 
